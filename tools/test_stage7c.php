@@ -15,6 +15,8 @@ $bad=$input; $bad['username']='1admin'; [, $e]=bs_registration_validate($bad);
 check(count($e)>0,'username tidak valid ditolak');
 $bad=$input; $bad['password']='pendek'; $bad['password_confirm']='pendek'; [, $e]=bs_registration_validate($bad);
 check(count($e)>0,'password pendek ditolak');
+$bad=$input; $bad['password']='😀😀😀😀'; $bad['password_confirm']='😀😀😀😀'; [, $e]=bs_registration_validate($bad);
+check(count($e)>0,'password beberapa emoji tidak lolos batas minimal karakter');
 $bad=$input; $bad['password_confirm']='beda'; [, $e]=bs_registration_validate($bad);
 check(count($e)>0,'konfirmasi password divalidasi');
 check(bs_registration_enabled(['REMOTE_ADDR'=>'127.0.0.1','SERVER_NAME'=>'localhost']) || getenv('BS_PUBLIC_REGISTRATION')==='0','localhost mengizinkan registrasi default');
