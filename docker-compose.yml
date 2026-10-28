@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    image: php:8.2-apache
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_NAME: bright_space
+      DB_USER: bright_user
+      DB_PASS: secret123
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: bright_space
+      MYSQL_USER: bright_user
+      MYSQL_PASSWORD: secret123
+      MYSQL_ROOT_PASSWORD: root123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/bright_space.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  mysql_data:

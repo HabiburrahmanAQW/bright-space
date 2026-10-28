@@ -1,0 +1,32 @@
+
+# Konfigurasi rahasia
+.env
+.env.*
+!.env.example
+
+# Dependensi dan pengaturan lokal
+/vendor/
+/node_modules/
+/.idea/
+/.vscode/
+
+# File sementara dan log
+*.log
+*.tmp
+*.zip
+Thumbs.db
+.DS_Store
+
+# Backup dan dump database
+/backups/
+/backup/
+*.sql.gz
+backup*.sql
+dump*.sql
+*_backup*.sql
+
+# Cache dan upload runtime
+/cache/
+/tmp/
+/storage/logs/
+/storage/uploads/

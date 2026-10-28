@@ -1,0 +1,267 @@
+<?php
+/** Tahap 4: mesin permainan misi MySQL, jawaban diverifikasi di server.
+ * Belum memberikan koin/XP dan belum menyimpan histori sampai Tahap 5.
+ */
+define('BRIGHT_SPACE',true);
+if(session_status()===PHP_SESSION_NONE)session_start();
+require __DIR__.'/config/database.php';
+require_once __DIR__.'/config/question_repository.php';
+// BS_STAGE6B_PLAYER_SNAPSHOT
+require_once __DIR__.'/config/publication_repository.php';
+require_login();
+$user=current_user();
+// BS_PROGRESS_STAGE5: pastikan siswa punya akun yang benar-benar terverifikasi.
+require_once __DIR__.'/config/student_progress.php';
+$verified=bs_verified_student();
+if(!$verified){http_response_code(403);exit('Login siswa diperlukan untuk bermain. <a href="login.php">Masuk</a>');}
+$missionId=filter_input(INPUT_GET,'mission',FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])?:0;
+$mission=$missionId?bmq_get_mission((int)$missionId):null;
+if (!$mission || $mission['publication_status']!=='published' || $mission['planet_status']!=='published' || (int)($user['level']??1)<(int)$mission['required_level']) {
+    http_response_code(404);exit('Misi tidak tersedia untuk akun ini. <a href="misi.php">Kembali ke Peta Misi</a>');
+}
+$embed = (($_GET['embed'] ?? '') === '1');
+$playerUrl='mainkan-misi.php?mission='.$missionId.($embed?'&embed=1':'');
+$mode=$mission['mode_type'];$questions=bs_pub_player_list((int)$mission['id'],$mode);$target=(int)$mission['question_target'];
+if ($target<1 || count($questions)<$target){http_response_code(409);exit('Soal misi belum cukup. <a href="planet-detail.php?id='.rawurlencode($mission['planet_id']).'">Kembali</a>');}
+$questionMap=[];foreach($questions as $q)$questionMap[(int)$q['id']]=$q;
+if(empty($_SESSION['bs_quiz_csrf']))$_SESSION['bs_quiz_csrf']=bin2hex(random_bytes(32));
+$csrf=$_SESSION['bs_quiz_csrf'];
+if(!empty($_SESSION['bs_mission_run']) && (int)$_SESSION['bs_mission_run']['mission_id']!==$missionId) unset($_SESSION['bs_mission_run']);
+// Jika tutor menerapkan Update Publikasi saat siswa mengerjakan misi, mulai ulang soal
+// agar tidak ada ID soal lama atau jumlah target yang berbeda dari snapshot terbaru.
+$bsSnapshotSig=hash('sha256',json_encode([$target,$questions],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR));
+if(!empty($_SESSION['bs_mission_run']) && ($_SESSION['bs_mission_run']['bs_snapshot_sig']??'')!==$bsSnapshotSig)unset($_SESSION['bs_mission_run']);
+if(empty($_SESSION['bs_mission_run'])){
+    $ids=array_slice(array_keys($questionMap),0,$target);
+    $_SESSION['bs_mission_run']=['mission_id'=>$missionId,'ids'=>$ids,'index'=>0,'correct'=>0,'stage'=>'question','started'=>time(),'feedback'=>null,'matching_map'=>[],'matching_index'=>-1,'bs_snapshot_sig'=>$bsSnapshotSig];
+}
+$run=&$_SESSION['bs_mission_run'];
+$limit=(int)$mission['timer_seconds'];
+if($limit>0 && $run['stage']!=='finished' && time()>=$run['started']+$limit){$run['stage']='finished';$run['feedback']=null;}
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    if(!is_string($_POST['csrf_token']??null)||!hash_equals($csrf,$_POST['csrf_token'])){http_response_code(403);exit('Token keamanan kedaluwarsa.');}
+    $action=(string)($_POST['action']??'');
+    // Tombol X / backdrop / Escape: hapus sesi di server, bukan hanya menutup iframe.
+    if($action==='abandon'){
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        if(empty($_SESSION['bs_mission_run']) || (int)($_SESSION['bs_mission_run']['mission_id']??0)!==$missionId){
+            http_response_code(409);
+            echo json_encode(['ok'=>false,'error'=>'Sesi misi aktif sudah berubah.']);
+            exit;
+        }
+        unset($_SESSION['bs_mission_run']);
+        echo json_encode(['ok'=>true]);
+        exit;
+    }
+    // BS_STAGE6A_FINISH_CLOSE: hanya hapus sesi sementara yang SUDAH tersimpan permanen.
+    if($action==='close_finished'){
+        if(($run['stage']??'')!=='finished' || !isset($run['bs_award'])){
+            http_response_code(409);header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok'=>false,'error'=>'Hasil misi belum selesai disimpan.']);exit;
+        }
+        unset($_SESSION['bs_mission_run']);
+        header('Cache-Control: no-store');
+        if(str_contains((string)($_SERVER['HTTP_ACCEPT']??''),'application/json')){
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok'=>true]);exit;
+        }
+        header('Location: planet-detail.php?id='.rawurlencode($mission['planet_id']), true, 303);exit;
+    }
+    if($action==='restart'){
+        unset($_SESSION['bs_mission_run']);header('Location: '.$playerUrl,true,303);exit;
+    }
+    if($run['stage']==='question' && $action==='answer'){
+        $qid=$run['ids'][$run['index']]??0;
+        $q=$questionMap[$qid]??null;
+        if(!$q){unset($_SESSION['bs_mission_run']);http_response_code(409);exit('Soal diperbarui, silakan mulai ulang misi.');}
+        $payload=$q['payload'];$good=false;$valid=true;
+        if(in_array($mode,['kuis','story','latihan'],true)){
+            $answer=$_POST['answer']??'';
+            $valid=is_string($answer) && in_array($answer,['A','B','C'],true);
+            $good=$valid && hash_equals((string)($payload['correct']??''),$answer);
+        } elseif($mode==='puzzle'){
+            $answer=$_POST['answer']??'';
+            $valid=is_string($answer)&&bmq_len($answer)<=150;
+            $good=$valid && bmq_norm($answer)===bmq_norm((string)($payload['answer']??''));
+        } elseif($mode==='matching'){
+            $pairs=$payload['pairs']??[];
+            $answer=$_POST['pair']??[];
+            $map=$run['matching_map'];
+            $valid=is_array($answer)&&count($answer)===3&&count($map)===3&&$run['matching_index']===$run['index'];
+            $good=$valid;
+            for($i=0;$i<3;$i++){
+                $token=$answer[$i]??null;
+                if(!is_string($token)||!isset($map[$token])||!isset($pairs[$i])){$valid=false;$good=false;break;}
+                if($map[$token]!==$pairs[$i]['right'])$good=false;
+            }
+            if($valid && count(array_unique(array_values($answer)))!==3)$good=false;
+        }
+        if(!$valid){$run['error']='Mohon isi jawaban yang valid.';}
+        else{
+            if($good)$run['correct']++;
+            $run['feedback']=['good'=>$good,'explanation'=>(string)$q['explanation']];
+            $run['stage']='feedback';unset($run['error']);
+        }
+    } elseif($run['stage']==='feedback' && $action==='next'){
+        $run['index']++;
+        $run['stage']=$run['index']>=count($run['ids'])?'finished':'question';
+        $run['feedback']=null;$run['matching_map']=[];$run['matching_index']=-1;
+    }
+    header('Location: '.$playerUrl,true,303);exit;
+}
+// Setelah hasil soal diverifikasi server, simpan penyelesaian sekali secara atomik.
+if($run['stage']==='finished' && !isset($run['bs_award'])){
+    try {
+        $reason = $limit > 0 && time() >= (int)$run['started'] + $limit ? 'timeout' : 'completed';
+        $run['bs_award']=bs_finish_mission((int)$verified['id'],$missionId,(int)$run['correct'],count($run['ids']),$reason);
+    } catch(Throwable $e){
+        error_log('BS mission finish failed: '.$e->getMessage());
+        http_response_code(503);exit('Hasil belum berhasil disimpan. Jangan ulangi misi dulu; coba muat ulang halaman untuk menyimpan ulang.');
+    }
+}
+$idx=(int)$run['index'];$finished=$run['stage']==='finished';$question=null;
+if(!$finished){$qid=$run['ids'][$idx]??0;$question=$questionMap[$qid]??null;if(!$question){unset($_SESSION['bs_mission_run']);http_response_code(409);exit('Bank soal berubah. Buka kembali misi dari Peta Misi.');}}
+$payload=$question['payload']??[];
+if(!$finished && $mode==='matching' && $run['matching_index']!==$idx){
+    $pairs=$payload['pairs']??[]; $right=array_column($pairs,'right');shuffle($right);$map=[];foreach($right as $r)$map[bin2hex(random_bytes(5))]=$r;
+    $run['matching_map']=$map;$run['matching_index']=$idx;
+}
+function play_e($v):string{return htmlspecialchars((string)$v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');}
+$back='planet-detail.php?id='.rawurlencode($mission['planet_id']);
+$percent=(int)round((count($run['ids'])?($idx/count($run['ids'])):0)*100);
+?>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= play_e($mission['title']) ?> — BRIGHT SPACE</title>
+<meta name="bs-mission-csrf" content="<?= play_e($csrf) ?>">
+<?php if ($finished && isset($run['bs_award'])): ?><meta name="bs-mission-finished" content="1"><?php endif; ?>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{nunito:['Nunito','ui-rounded','sans-serif']}}}};</script>
+<style>
+    html,body {min-height:100%;}
+    <?php if ($embed): ?>body{background:#ede9fe}<?php else: ?>body{background:#eef6ff}<?php endif; ?>
+    .answer-option:has(input:checked){border-color:#8b5cf6;background:#f5f3ff;box-shadow:0 0 0 2px #ede9fe}
+    .answer-option:focus-within{outline:3px solid #c4b5fd;outline-offset:2px}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+</style>
+</head>
+<body class="font-nunito text-indigo-950 antialiased <?= $embed?'':'min-h-screen flex flex-col' ?>">
+<?php if (!$embed): ?>
+<header class="border-b-4 border-amber-200 bg-white p-4"><div class="max-w-3xl mx-auto flex justify-between items-center gap-2 flex-wrap font-black"><a class="text-violet-700" href="<?= play_e($back) ?>">← Kembali ke Planet</a><span>🪐 BRIGHT SPACE</span></div></header>
+<?php endif; ?>
+<main class="<?= $embed?'p-4 sm:p-6':'max-w-[570px] mx-auto w-full px-4 py-8' ?>">
+<section class="<?= $embed?'':'border-2 border-amber-200 rounded-3xl shadow-xl' ?> bg-violet-100/80 p-1" aria-labelledby="mission-title">
+  <div class="flex items-center gap-3 mt-1 mb-6 <?= $embed?'pr-10':'' ?>">
+    <span class="inline-flex w-12 h-12 items-center justify-center rounded-full bg-violet-500 text-3xl shrink-0" aria-hidden="true"><?= play_e(['kuis'=>'⚡','story'=>'📖','puzzle'=>'🔤','matching'=>'🧩','latihan'=>'🎓'][$mode]??'🪐') ?></span>
+    <div class="min-w-0 flex-1">
+      <p class="text-[11px] font-black uppercase tracking-wider text-violet-700"><?= $mission['category']==='wajib'?'⭐ Misi Wajib':'💎 Misi Sampingan' ?> · <?= play_e(ucfirst($mode)) ?></p>
+      <h1 id="mission-title" class="font-black text-xl leading-tight break-words"><?= play_e($mission['title']) ?></h1>
+    </div>
+    <?php if ($limit > 0 && !$finished): ?>
+    <span class="shrink-0 bg-rose-50 border-2 border-rose-300 text-rose-700 text-sm font-black rounded-2xl px-3 py-1 text-center"><span class="block text-[10px]">WAKTU</span><span id="time-display" data-remaining="<?= max(0, $run['started']+$limit-time()) ?>">--:--</span></span>
+    <?php endif; ?>
+  </div>
+  <div class="flex justify-between items-center text-xs font-extrabold mb-2"><span><?= $finished?'Misi selesai':'Soal '.($idx+1).' dari '.count($run['ids']) ?></span><span class="text-emerald-700">✅ <?= (int)$run['correct'] ?></span></div>
+  <div class="h-2 rounded-full bg-white border border-violet-200 overflow-hidden"><div class="bg-violet-500 h-full rounded-full" style="width:<?= $finished?'100':$percent ?>%"></div></div>
+<?php if ($finished):
+$total=count($run['ids']);$accur=$total?(int)round(100*$run['correct']/$total):0;
+?>
+  <div class="mt-6 p-5 text-center bg-white/70 rounded-2xl border border-violet-200">
+    <div class="text-5xl">🏆</div><h2 class="font-black text-2xl mt-2">Misi Selesai!</h2>
+    <p class="font-extrabold text-lg mt-3"><?= (int)$run['correct'] ?>/<?= (int)$total ?> benar · <?= (int)$accur ?>% akurasi</p>
+    <?php $award=$run['bs_award']??['first'=>false,'coins'=>0,'xp'=>0,'balance'=>0,'total_xp'=>0,'level'=>1]; ?>
+    <div class="mt-4 rounded-xl border-2 border-amber-200 bg-amber-50 p-3 font-black text-sm">
+      <?php if($award['first']): ?>🎉 Reward pertama: +<?= (int)$award['coins'] ?> Koin · +<?= (int)$award['xp'] ?> XP
+      <?php else: ?>🔄 Misi dimainkan ulang: tidak ada tambahan koin/XP (nilai terbaik tetap dicatat).
+      <?php endif; ?>
+      <div class="text-xs text-slate-600 mt-2">Saldo: <?= (int)$award['balance'] ?> koin · Total XP: <?= (int)$award['total_xp'] ?> · Level <?= (int)$award['level'] ?></div>
+    </div><a href="progres-misi.php" target="_top" class="block mt-3 text-violet-700 font-black text-sm underline">Lihat Progres Kapten →</a>
+  </div>
+  <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="Tindakan setelah misi selesai">
+  <form method="post"><input type="hidden" name="csrf_token" value="<?= play_e($csrf) ?>"><button class="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-full font-black" type="submit" name="action" value="restart">🔄 Main Lagi</button></form>
+  <form method="post" id="bs-finish-form"><input type="hidden" name="csrf_token" value="<?= play_e($csrf) ?>"><input type="hidden" name="action" value="close_finished"><button class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-black" type="submit">✅ Selesai</button></form>
+</div>
+<?php else: ?>
+  <h2 class="font-black text-lg leading-snug mt-6 mb-4 whitespace-pre-line"><?= play_e($question['prompt']) ?></h2>
+  <?php if ($run['stage']==='feedback'): ?>
+    <div class="rounded-2xl border-2 <?= $run['feedback']['good']?'bg-emerald-50 border-emerald-300':'bg-amber-50 border-amber-300' ?> p-4 mt-4" aria-live="polite">
+      <h3 class="font-black text-lg"><?= $run['feedback']['good']?'✅ Benar!':'💡 Belum tepat' ?></h3>
+      <p class="mt-1 font-bold text-sm whitespace-pre-line"><?= play_e($run['feedback']['explanation']?:'Terus belajar, Kapten!') ?></p>
+    </div>
+    <form method="post" class="mt-5"><input type="hidden" name="csrf_token" value="<?= play_e($csrf) ?>"><button class="w-full rounded-full py-3 font-black text-white bg-violet-600 hover:bg-violet-700" type="submit" name="action" value="next"><?= $idx===count($run['ids'])-1?'Lihat Hasil 🏁':'Soal Berikutnya →' ?></button></form>
+  <?php else: ?>
+    <?php if(!empty($run['error'])): ?><p role="alert" class="text-rose-700 font-black text-sm mb-3"><?= play_e($run['error']) ?></p><?php endif ?>
+    <form method="post" class="mt-4"><input type="hidden" name="csrf_token" value="<?= play_e($csrf) ?>"><input type="hidden" name="action" value="answer">
+    <?php if(in_array($mode,['kuis','story','latihan'],true)): ?>
+      <fieldset class="space-y-3"><legend class="sr-only">Pilih satu jawaban</legend>
+      <?php foreach(($payload['choices']??[]) as $key=>$option): ?>
+        <label class="answer-option flex gap-3 items-center p-3 border-2 border-violet-200 bg-white rounded-2xl cursor-pointer hover:border-violet-400 min-h-[56px]">
+          <input class="sr-only peer" type="radio" name="answer" value="<?= play_e($key) ?>" required>
+          <span class="w-9 h-9 flex justify-center items-center rounded-full shrink-0 text-white bg-violet-500 font-black text-base"><?= play_e($key) ?></span>
+          <span class="font-extrabold text-base break-words"><?= play_e($option) ?></span>
+        </label>
+      <?php endforeach ?>
+      </fieldset>
+    <?php elseif($mode==='puzzle'): ?>
+      <div class="bg-white/70 border border-violet-200 p-4 rounded-2xl"><p class="font-black text-xs">🔤 Huruf acak</p><p class="font-black text-2xl tracking-widest break-all mt-2"><?= play_e($payload['scramble']??'') ?></p><?php if(!empty($payload['hint'])): ?><p class="font-bold text-sm mt-2">Petunjuk: <?= play_e($payload['hint']) ?></p><?php endif ?></div>
+      <label class="block font-black mt-4 mb-2" for="answer">Jawabanmu</label><input class="w-full bg-white border-2 border-violet-200 rounded-2xl p-3 font-extrabold" type="text" name="answer" id="answer" maxlength="150" required autocomplete="off">
+    <?php elseif($mode==='matching'): ?>
+      <p class="text-sm font-bold mb-4">Cocokkan masing-masing pasangan:</p>
+      <div class="space-y-3"><?php foreach(($payload['pairs']??[]) as $i=>$pair): ?>
+        <div class="bg-white/70 rounded-2xl border border-violet-200 p-3"><label for="pair<?= (int)$i ?>" class="block font-black mb-2 text-sm"><?= (int)$i+1 ?>. <?= play_e($pair['left']) ?></label>
+        <select required class="w-full bg-white border border-violet-300 rounded-xl p-2 font-bold" name="pair[<?= (int)$i ?>]" id="pair<?= (int)$i ?>"><option value="">Pilih pasangan...</option><?php foreach($run['matching_map'] as $token=>$right): ?><option value="<?= play_e($token) ?>"><?= play_e($right) ?></option><?php endforeach ?></select></div>
+      <?php endforeach ?></div>
+    <?php endif ?>
+    <button class="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-full py-3 mt-5 font-black" type="submit">Periksa Jawaban →</button>
+    </form>
+  <?php endif; ?>
+<?php endif; ?>
+  <div class="mt-5 flex gap-3 items-start">
+    <div class="w-12 h-12 shrink-0 rounded-full overflow-hidden" aria-hidden="true"><?= file_get_contents(__DIR__.'/components/arazka-svg.php') ?></div>
+    <div class="flex-1 bg-white/60 border-2 border-violet-200 rounded-2xl p-3 text-xs sm:text-sm">
+      <p class="font-black text-violet-600 text-[11px] mb-1">Arazka</p>
+      <p class="font-black"><?= $finished?'Hebat, Kapten! Misi sudah selesai! 🏁':($run['stage']==='feedback'?($run['feedback']['good']?'Kerja bagus! 🌟':'Jangan menyerah, Kapten! 💪'):'Sesi dimulai! Jawab dengan teliti ya! 🚀') ?></p>
+      <p class="font-bold mt-1"><?= $finished?'Kamu bisa memainkan lagi untuk berlatih.':($run['stage']==='feedback'?'Baca penjelasan lalu lanjutkan misimu.':'Baca pelan-pelan dan pilih yang paling tepat!') ?></p>
+    </div>
+  </div>
+  <p class="mt-4 text-[11px] text-slate-500 font-bold text-center">Koin/XP diberikan sekali saat penyelesaian pertama. Bermain ulang memperbarui skor terbaik.</p>
+</section>
+</main>
+<script>
+(() => {
+  const clock = document.getElementById('time-display');
+  if (!clock) return;
+  const initial = Number(clock.dataset.remaining) || 0;
+  const expireAt = Date.now() + initial * 1000;
+  const fmt = n => String(n).padStart(2,'0');
+  const tick = () => {
+    const sec = Math.max(0, Math.ceil((expireAt-Date.now())/1000));
+    clock.textContent=fmt(Math.floor(sec/60))+':'+fmt(sec%60);
+    if(sec===0) location.reload();
+  };
+  tick();setInterval(tick,1000);
+})();
+<?php if ($embed && $finished && isset($run['bs_award'])): ?>
+window.parent.postMessage({ type: 'bs-mission-reward', balance: <?= (int)$run['bs_award']['balance'] ?>, level: <?= (int)$run['bs_award']['level'] ?> }, location.origin);
+<?php endif; ?>
+<?php if ($embed && $finished && isset($run['bs_award'])): ?>
+const completedForm = document.getElementById('bs-finish-form');
+completedForm?.addEventListener('submit', function(event) {
+  if (window.parent === window) return;
+  event.preventDefault();
+  window.parent.postMessage({ type: 'bs-mission-done' }, location.origin);
+});
+<?php endif; ?><?php if ($embed): ?>
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape' && window.parent !== window) {
+    event.preventDefault();
+    window.parent.postMessage({ type: 'bs-mission-close' }, location.origin);
+  }
+});
+<?php endif; ?>
+</script>
+</body></html>
