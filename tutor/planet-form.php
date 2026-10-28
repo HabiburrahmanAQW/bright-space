@@ -201,8 +201,8 @@ $bootstrap = [
                     </section>
                     <section class="editor-panel !p-4 sm:!p-5 space-y-3">
                         <h2 class="text-lg font-black">Simpan Planet</h2>
-                        <p class="text-sm font-bold text-slate-600">Planet hanya disimpan sebagai Draft dari halaman ini. Tambahkan soal, lalu publikasikan melalui halaman Kelola Soal.</p>
-                        <button type="submit" name="save_action" value="draft" class="w-full rounded-2xl border-2 border-violet-400 bg-white text-violet-700 hover:bg-violet-50 py-3 font-black shadow-sm">💾 Simpan Draft</button>
+                        <p class="text-sm font-bold text-slate-600"><?php if ($isEdit && $planet['publication_status'] === 'published'): ?>Planet tetap Published saat perubahan disimpan. Perubahan soal untuk siswa diterapkan melalui Update Publikasi di daftar misi. Untuk menghapus atau mengganti gamemode misi yang sudah tayang, kembalikan planet ke Draft dahulu.<?php else: ?>Planet baru disimpan sebagai Draft. Tambahkan soal, lalu publikasikan melalui halaman Kelola Soal.<?php endif; ?></p>
+                        <button type="submit" name="save_action" value="draft" class="w-full rounded-2xl border-2 border-violet-400 bg-white text-violet-700 hover:bg-violet-50 py-3 font-black shadow-sm">💾 <?= ($isEdit && $planet['publication_status'] === 'published') ? 'Simpan Perubahan' : 'Simpan Draft' ?></button>
                         <button type="submit" name="save_action" value="draft_next" class="w-full rounded-2xl bg-violet-600 hover:bg-violet-700 text-white py-3 font-black shadow-sm">📝 Simpan &amp; Kelola Soal →</button>
                         <p class="text-xs text-slate-500 font-bold">Misi harus tersimpan sebelum menambah soal. Klik Simpan &amp; Kelola Soal untuk lanjut. Publikasikan setelah sedikitnya satu soal dibuat.</p>
                         <p id="form-client-error" role="alert" class="hidden text-sm font-bold text-rose-600"></p>

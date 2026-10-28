@@ -103,7 +103,7 @@ $missionCount = array_sum(array_map(fn($p) => (int) $p['mission_count'], $planet
                 </div>
             <?php endif; ?>
         </section>
-        <p class="text-xs text-slate-500 font-bold mt-6">Planet draft tidak boleh ditampilkan pada siswa. Integrasi ke halaman siswa dan editor konten soal merupakan tahapan lanjutan.</p>
+        <p class="text-xs text-slate-500 font-bold mt-6">Planet Draft tidak tampil untuk siswa. Planet Published dengan soal siap dimainkan dapat diakses sesuai level siswa.</p>
     </main>
 </body>
 </html>

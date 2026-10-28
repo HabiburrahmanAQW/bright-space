@@ -42,17 +42,26 @@ try {
             http_response_code(404);
             exit('Planet tidak ditemukan atau tidak diizinkan untuk diedit.');
         }
+        // Editing content must not silently unpublish an already published planet.
+        // Publication changes are controlled by tutor/planet-publication.php.
+        $wasPublished = $existing['publication_status'] === 'published';
         $stmt = $pdo->prepare(
-            'UPDATE bs_planets SET name = ?, description = ?, required_level = ?, theme_key = ?, icon_key = ?,
-                publication_status = ? WHERE id = ?'
+            'UPDATE bs_planets SET name = ?, description = ?, required_level = ?, theme_key = ?, icon_key = ?
+             WHERE id = ?'
         );
         $stmt->execute([
             $input['name'], $input['description'], $input['required_level'],
-            $input['theme_key'], $input['icon_key'], $input['publication_status'], $oldId,
+            $input['theme_key'], $input['icon_key'], $oldId,
         ]);
-        $statement = $pdo->prepare('SELECT id FROM bs_missions WHERE planet_id = ? FOR UPDATE');
+        $statement = $pdo->prepare(
+            'SELECT id, mode_type, publication_status FROM bs_missions WHERE planet_id = ? FOR UPDATE'
+        );
         $statement->execute([$oldId]);
-        $existingMissionIds = array_fill_keys(array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN)), true);
+        $existingMissions = [];
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $existingMissions[(int) $row['id']] = $row;
+        }
+        $existingMissionIds = array_fill_keys(array_keys($existingMissions), true);
     } else {
         $stmt = $pdo->prepare(
             'INSERT INTO bs_planets (id, name, description, required_level, theme_key, icon_key, publication_status, created_by)
@@ -63,6 +72,8 @@ try {
             $input['theme_key'], $input['icon_key'], $input['publication_status'], (int) $tutor['id'],
         ]);
         $existingMissionIds = [];
+        $existingMissions = [];
+        $wasPublished = false;
     }
 
     $planetId = $input['id'];
@@ -82,10 +93,19 @@ try {
             if (!isset($existingMissionIds[$m['id']])) {
                 throw new DomainException('Ada ID misi yang tidak milik planet ini. Muat ulang formulir.');
             }
+            $previousMission = $existingMissions[$m['id']];
+            // A mode change would instantly invalidate the student's published question snapshot.
+            if ($wasPublished && $previousMission['publication_status'] === 'published'
+                && $previousMission['mode_type'] !== $m['mode_type']) {
+                throw new DomainException(
+                    'Jenis permainan pada misi terpublikasi tidak boleh diubah langsung. '
+                    . 'Kembalikan planet ke Draft terlebih dahulu.'
+                );
+            }
             $update->execute([
                 $m['category'], $m['mode_type'], $m['title'], $m['description'],
                 $m['reward_coins'], $m['timer_seconds'], $m['question_target'],
-                $order, $input['publication_status'], $m['id'], $planetId,
+                $order, $previousMission['publication_status'], $m['id'], $planetId,
             ]);
             $retained[$m['id']] = true;
         } else {
@@ -100,12 +120,21 @@ try {
         $remove = $pdo->prepare('DELETE FROM bs_missions WHERE id = ? AND planet_id = ?');
         foreach ($existingMissionIds as $id => $_) {
             if (!isset($retained[$id])) {
+                // Deleting a published mission would also cascade-delete its live snapshot and progress.
+                if ($wasPublished && $existingMissions[$id]['publication_status'] === 'published') {
+                    throw new DomainException(
+                        'Misi terpublikasi belum dapat dihapus langsung. '
+                        . 'Kembalikan planet ke Draft sebelum menghapus misi.'
+                    );
+                }
                 $remove->execute([(int) $id, $planetId]);
             }
         }
     }
     $pdo->commit();
-    $_SESSION['planet_saved_message'] = 'Planet dan misinya disimpan sebagai Draft. Kelola soal lalu publikasikan dari daftar misi.';
+    $_SESSION['planet_saved_message'] = $wasPublished
+        ? 'Perubahan tersimpan. Planet tetap Published. Jika ada perubahan soal, buka Kelola Soal Misi lalu pilih Update Publikasi.'
+        : 'Planet dan misinya disimpan sebagai Draft. Kelola soal lalu publikasikan dari daftar misi.';
     unset($_SESSION['planet_editor_flash']);
     header('Location: ' . ($requestedAction === 'draft_next' ? 'mission-list.php?planet=' : 'planet-form.php?id=') . rawurlencode($planetId), true, 303);
     exit;
