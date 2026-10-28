@@ -9,7 +9,7 @@ Platform pembelajaran bergamifikasi berbasis **Native PHP, MySQL, Tailwind CSS (
 3. Jalankan migrasi berurutan dari `sql/01_fondasi_tutor.sql` sampai `sql/04_toko_dan_snapshot.sql`. Untuk database yang sudah dipakai Tahap 6B, **jangan hapus atau reset tabel**.
 4. Untuk instalasi baru setelah migrasi, jalankan `php tools/init_stage6b.php` agar snapshot awal publikasi terisi bila diperlukan. Jalankan hanya pada database yang sudah memiliki keempat migrasi.
 5. Buat akun uji (jika belum ada) dengan `php tools/create_student.php <username>` dan `php tools/create_tutor.php <username>`.
-6. Buka `login.php` untuk siswa dan `tutor/login.php` untuk tutor. Pendaftaran akun berbasis web direncanakan untuk tahap selanjutnya.
+6. Buka `login.php` untuk login terpadu siswa/tutor. Siswa lokal dapat mendaftar pada `register.php`; administrator membuat tutor pada `tutor/accounts.php`.
 
 `sql/` berisi skema/migrasi, **bukan data pribadi siswa**. Jangan commit dump data nyata atau file kredensial.
 
@@ -32,3 +32,7 @@ Mengedit planet yang sudah Published **tidak otomatis mengubahnya menjadi Draft*
 **Belum selesai:** API legacy di `api/`, logika toko lama dalam `assets/js/app.js`, serta login/register terpadu. Hindari menggunakan endpoint API lama sampai migrasi autentikasi dan toko selesai.
 
 Lihat [audit dan checklist Tahap 7A](docs/AUDIT-TAHAP7A.md).
+
+## Tahap 7C — Registrasi dan Login
+
+Siswa dapat membuat akun pada register.php secara lokal. Login terpadu menggunakan login.php?role=siswa dan login.php?role=tutor, dengan cookie/session terpisah. Tutor baru dapat dibuat melalui tutor/accounts.php oleh administrator. Lihat docs/TAHAP7C-AUTH.md.

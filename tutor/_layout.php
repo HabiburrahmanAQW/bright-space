@@ -12,6 +12,9 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
         ['id' => 'planets', 'href' => 'planet-form.php', 'icon' => '🪐', 'label' => 'Tambah Planet'],
         ['id' => 'questions', 'href' => 'index.php#planet-list-title', 'icon' => '📚', 'label' => 'Kelola Soal Misi'],
     ];
+    if (($tutor['role'] ?? '') === 'admin') {
+        $links[] = ['id' => 'accounts', 'href' => 'accounts.php', 'icon' => '👥', 'label' => 'Kelola Akun Tutor'];
+    }
     $displayName = (string)($tutor['display_name'] ?? $tutor['username'] ?? 'Tutor');
     $role = (($tutor['role'] ?? '') === 'admin') ? 'Administrator' : 'Tutor';
     $csrf = tutor_csrf_token();
