@@ -65,21 +65,13 @@ $bootstrap = [
     <link rel="stylesheet" href="assets/editor.css">
     <script id="editor-data" type="application/json"><?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
     <script src="assets/planet-editor.js" defer></script>
+    <link rel="stylesheet" href="assets/tutor-layout.css">
 </head>
 <body class="bg-sky-50 text-indigo-950 font-nunito min-h-screen antialiased">
-    <header class="bg-white/95 border-b-4 border-amber-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-            <a href="index.php" class="inline-flex gap-2 items-center font-black text-lg hover:text-violet-700" aria-label="Kembali ke dashboard tutor">
-                <span aria-hidden="true">🪐</span> BRIGHT SPACE <span class="text-violet-600">Tutor</span>
-            </a>
-            <div class="flex gap-2 items-center text-sm">
-                <span class="hidden sm:inline text-slate-500 font-bold">👩‍🚀 <?= tutor_e($tutor['display_name']) ?></span>
-                <a href="index.php" class="bg-violet-100 hover:bg-violet-200 px-4 py-2 rounded-full font-extrabold">← Dashboard</a>
-            </div>
-        </div>
-    </header>
+<?php require_once __DIR__ . '/_layout.php'; tutor_layout_start($tutor, 'planets', 'Editor Planet'); ?>
+    
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-7 pb-20">
+    <main id="tutor-main" class="max-w-7xl mx-auto px-4 sm:px-6 py-7 pb-20">
         <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
                 <p class="uppercase tracking-widest text-xs text-violet-600 font-black mb-1">🚀 Pusat Kreasi Tutor</p>
@@ -211,5 +203,6 @@ $bootstrap = [
             </div>
         </form>
     </main>
+<?php tutor_layout_end(); ?>
 </body>
 </html>

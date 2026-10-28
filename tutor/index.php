@@ -41,18 +41,12 @@ $missionCount = array_sum(array_map(fn($p) => (int) $p['mission_count'], $planet
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config={theme:{extend:{fontFamily:{nunito:['Nunito','ui-rounded','sans-serif']}}}};</script>
     <link rel="stylesheet" href="assets/editor.css">
+    <link rel="stylesheet" href="assets/tutor-layout.css">
 </head>
 <body class="bg-sky-50 text-indigo-950 font-nunito min-h-screen antialiased">
-    <header class="bg-white border-b-4 border-amber-200 px-5 py-4">
-        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <span class="font-black text-lg">🪐 BRIGHT SPACE <span class="text-violet-600">Tutor</span></span>
-            <form action="logout.php" method="post">
-                <input type="hidden" name="csrf_token" value="<?= tutor_e(tutor_csrf_token()) ?>">
-                <button type="submit" class="bg-violet-100 hover:bg-violet-200 px-4 py-2 rounded-full font-extrabold text-sm">Keluar</button>
-            </form>
-        </div>
-    </header>
-    <main class="max-w-6xl mx-auto px-5 py-8 pb-20">
+<?php require_once __DIR__ . '/_layout.php'; tutor_layout_start($tutor, 'dashboard', 'Dashboard Tutor'); ?>
+    
+    <main id="tutor-main" class="max-w-6xl mx-auto px-5 py-8 pb-20">
         <div class="flex flex-wrap justify-between items-end gap-4">
             <div>
                 <p class="text-xs font-black tracking-wider text-violet-600 uppercase">✨ Mission Control</p>
@@ -105,5 +99,6 @@ $missionCount = array_sum(array_map(fn($p) => (int) $p['mission_count'], $planet
         </section>
         <p class="text-xs text-slate-500 font-bold mt-6">Planet Draft tidak tampil untuk siswa. Planet Published dengan soal siap dimainkan dapat diakses sesuai level siswa.</p>
     </main>
+<?php tutor_layout_end(); ?>
 </body>
 </html>
