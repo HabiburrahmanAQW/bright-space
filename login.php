@@ -67,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Form sudah kedaluwarsa. Muat ulang halaman.';
     } else {
         $username = is_string($_POST['username'] ?? null) ? trim($_POST['username']) : '';
+        if (!$isTutor) $username = strtolower($username);
         $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
         $key = $isTutor ? 'bs_tutor_login_fail' : 'bs_student_login_fail';
         $count = (int)($_SESSION[$key . '_count'] ?? 0);
