@@ -36,7 +36,8 @@ function bs_registration_validate(array $input): array
         || preg_match('/[\x00-\x1F\x7F]/u', $displayName)) {
         $errors[] = 'Nama tampilan harus 2–80 karakter dan tidak berisi karakter kontrol.';
     }
-    if (strlen($password) < 12 || strlen($password) > 72) {
+    $passwordChars = function_exists('mb_strlen') ? mb_strlen($password, 'UTF-8') : preg_match_all('/./us', $password);
+    if ($passwordChars === false || $passwordChars < 12 || strlen($password) > 72) {
         $errors[] = 'Password minimal 12 karakter dan maksimal 72 byte.';
     }
     if ($password !== $confirm) {
