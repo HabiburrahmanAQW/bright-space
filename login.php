@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             try {
                 $pdo=mission_db();
                 $s=$pdo->prepare('SELECT id,password_hash FROM bs_students WHERE username=? AND is_active=1 LIMIT 1');
-                $t=$pdo->prepare("SELECT id,password_hash FROM bs_tutors WHERE username=? AND is_active=1 AND role IN ('tutor','admin') LIMIT 1");
+                $t=$pdo->prepare("SELECT id,password_hash,role FROM bs_tutors WHERE username=? AND is_active=1 AND role IN ('tutor','admin') LIMIT 1");
                 $s->execute([$username]);$student=$s->fetch(PDO::FETCH_ASSOC);
                 $t->execute([$username]);$tutor=$t->fetch(PDO::FETCH_ASSOC);
                 $studentOk=$student&&password_verify($password,(string)$student['password_hash']);
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                     $_SESSION=[];
                     $_SESSION['tutor_id']=(int)$tutor['id'];
                     $_SESSION['tutor_csrf']=bin2hex(random_bytes(32));
-                    header('Location: tutor/index.php',true,303);exit;
+                    header('Location: '.($tutor['role']==='admin'?'admin/index.php':'tutor/index.php'),true,303);exit;
                 }
                 if ($studentOk && $tutorOk) {
                     error_log('BRIGHT SPACE: ambiguous cross-role legacy credentials for username '.$username);
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 <main class="bs-auth-card">
     <div class="bs-auth-logo" aria-hidden="true">🚀</div>
     <h1>BRIGHT <span>SPACE</span></h1>
-    <p class="bs-auth-intro">Masukkan akun BRIGHT SPACE untuk melanjutkan petualangan atau mengelola pembelajaran.</p>
+    <p class="bs-auth-intro">Masuk menggunakan akun yang diberikan oleh sekolah.</p>
     <?php if ($error!==''): ?><p class="bs-auth-error" role="alert"><?= bs_login_e($error) ?></p><?php endif; ?>
     <form method="post" action="login.php" class="bs-auth-form">
         <input type="hidden" name="csrf_token" value="<?= bs_login_e($_SESSION['bs_login_csrf']) ?>">
@@ -115,6 +115,5 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             placeholder="Masukkan password">
         <button type="submit" class="bs-auth-submit">Masuk ke BRIGHT SPACE 🚀</button>
     </form>
-    <p class="bs-auth-footnote">Akun siswa diberikan oleh tutor atau sekolah.</p>
-    <p class="bs-auth-footnote">Pengajar baru? <a href="register-tutor.php">Daftar sebagai tutor</a></p>
+    <p class="bs-auth-footnote">Akun siswa dan tutor disediakan oleh Administrator Sekolah.</p>
 </main></body></html>

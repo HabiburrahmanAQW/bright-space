@@ -1,8 +1,8 @@
 <?php
 require __DIR__ . '/_auth.php';
-$tutor = tutor_require_login();
+$tutor = tutor_require_teacher();
 if (($tutor['role'] ?? '') === 'admin') {
-    require __DIR__ . '/admin-dashboard.php';
+    header('Location: ../admin/index.php', true, 303);
     exit;
 }
 $planets = [];
@@ -57,10 +57,7 @@ $missionCount = array_sum(array_map(fn($p) => (int) $p['mission_count'], $planet
                 <h1 class="mt-1 text-3xl font-black">Halo, <?= tutor_e($tutor['display_name']) ?>! 👋</h1>
                 <p class="mt-2 text-slate-600 font-bold">Kelola planet, misi wajib, dan side quest dari sini.</p>
             </div>
-            <div class="flex flex-wrap gap-3">
-                <a href="planet-form.php" class="bg-violet-600 hover:bg-violet-700 rounded-2xl text-white px-5 py-3 font-black shadow">＋ Tambah Planet Baru</a>
-                <a href="students.php" class="bg-white border-2 border-violet-300 hover:bg-violet-50 rounded-2xl text-violet-700 px-5 py-3 font-black shadow-sm">👩‍🎓 Tambah Siswa</a>
-            </div>
+            <a href="planet-form.php" class="bg-violet-600 hover:bg-violet-700 rounded-2xl text-white px-5 py-3 font-black shadow">＋ Tambah Planet Baru</a>
         </div>
         <?php if ($databaseError): ?>
             <div class="notify notify-error mt-6" role="alert"><?= tutor_e($databaseError) ?></div>

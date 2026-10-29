@@ -7,21 +7,13 @@ require_once __DIR__ . '/_auth.php';
 
 function tutor_layout_start(array $tutor, string $active, string $pageTitle): void
 {
-    $isAdmin = ($tutor['role'] ?? '') === 'admin';
-    $links = $isAdmin
-        ? [
-            ['id' => 'dashboard', 'href' => 'index.php', 'icon' => '🏫', 'label' => 'Dashboard Admin'],
-            ['id' => 'accounts', 'href' => 'accounts.php', 'icon' => '👩‍🏫', 'label' => 'Daftar & Persetujuan Tutor'],
-            ['id' => 'directory', 'href' => 'student-directory.php', 'icon' => '🎓', 'label' => 'Daftar Seluruh Siswa'],
-        ]
-        : [
-            ['id' => 'dashboard', 'href' => 'index.php', 'icon' => '🏠', 'label' => 'Dashboard Tutor'],
-            ['id' => 'planets', 'href' => 'planet-form.php', 'icon' => '🪐', 'label' => 'Tambah Planet'],
-            ['id' => 'questions', 'href' => 'index.php#planet-list-title', 'icon' => '📚', 'label' => 'Kelola Soal Misi'],
-            ['id' => 'students', 'href' => 'students.php', 'icon' => '👩‍🎓', 'label' => 'Tambah & Kelola Siswa'],
-        ];
+    $links = [
+        ['id' => 'dashboard', 'href' => 'index.php', 'icon' => '🏠', 'label' => 'Dashboard Tutor'],
+        ['id' => 'planets', 'href' => 'planet-form.php', 'icon' => '🪐', 'label' => 'Tambah Planet'],
+        ['id' => 'questions', 'href' => 'index.php#planet-list-title', 'icon' => '📚', 'label' => 'Kelola Soal Misi'],
+    ];
     $displayName = (string)($tutor['display_name'] ?? $tutor['username'] ?? 'Tutor');
-    $role = (($tutor['role'] ?? '') === 'admin') ? 'Administrator' : 'Tutor';
+    $role = 'Tutor';
     $csrf = tutor_csrf_token();
     ?>
 <a href="#tutor-main" class="bs-tutor-skip">Langsung ke konten</a>
@@ -29,20 +21,20 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
 <aside class="bs-tutor-sidebar" id="bs-tutor-sidebar" aria-label="Navigasi tutor">
     <div class="bs-tutor-brand">
         <a href="index.php" class="bs-tutor-brand-link">
-            <span class="bs-tutor-brand-icon" aria-hidden="true"><?= $isAdmin ? '🏫' : '🚀' ?></span>
-            <span>BRIGHT <strong>SPACE</strong><small><?= $isAdmin ? 'Portal Admin' : 'Portal Tutor' ?></small></span>
+            <span class="bs-tutor-brand-icon" aria-hidden="true">🚀</span>
+            <span>BRIGHT <strong>SPACE</strong><small>Portal Tutor</small></span>
         </a>
         <button type="button" id="bs-tutor-close" class="bs-tutor-close" aria-label="Tutup menu">✕</button>
     </div>
 
     <div class="bs-tutor-identity">
-        <span class="bs-tutor-avatar" aria-hidden="true"><?= $isAdmin ? '🛡️' : '📚' ?></span>
+        <span class="bs-tutor-avatar" aria-hidden="true">📚</span>
         <div><span class="bs-tutor-small"><?= tutor_e($role) ?></span>
              <strong><?= tutor_e($displayName) ?></strong></div>
     </div>
 
     <nav class="bs-tutor-nav" aria-label="Menu utama">
-        <p class="bs-tutor-nav-label"><?= $isAdmin ? 'MENU ADMIN' : 'MENU TUTOR' ?></p>
+        <p class="bs-tutor-nav-label">MENU TUTOR</p>
         <?php foreach ($links as $link): ?>
             <a href="<?= tutor_e($link['href']) ?>"
                class="bs-tutor-link<?= $active === $link['id'] ? ' is-active' : '' ?>"
@@ -54,7 +46,7 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
     </nav>
 
     <div class="bs-tutor-sidebar-footer">
-        <p><?= $isAdmin ? 'Pantau akun tutor dan siswa serta tinjau pendaftaran pengajar.' : 'Kelola materi pembelajaran dan terbitkan misi untuk siswa.' ?></p>
+        <p>Kelola planet, misi, dan soal pembelajaran.</p>
         <form action="logout.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= tutor_e($csrf) ?>">
             <button type="submit" class="bs-tutor-logout">🚪 Keluar</button>
@@ -68,7 +60,7 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
             <button type="button" id="bs-tutor-open" class="bs-tutor-menu-toggle"
                     aria-label="Buka menu tutor" aria-controls="bs-tutor-sidebar" aria-expanded="false">☰</button>
             <div>
-                <p class="bs-tutor-eyebrow">BRIGHT SPACE · <?= $isAdmin ? 'ADMIN SEKOLAH' : 'TUTOR STUDIO' ?></p>
+                <p class="bs-tutor-eyebrow">BRIGHT SPACE · TUTOR STUDIO</p>
                 <h2><?= tutor_e($pageTitle) ?></h2>
             </div>
         </div>
