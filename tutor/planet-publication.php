@@ -2,7 +2,7 @@
 /** Publikasi Tahap 6B: CSRF, ownership, transaksi, snapshot. */
 require __DIR__.'/_auth.php';
 require_once __DIR__.'/../config/publication_repository.php';
-$tutor=tutor_require_login();
+$tutor=tutor_require_teacher();
 if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);exit('POST diperlukan.');}
 if(!tutor_valid_csrf($_POST['csrf_token']??null)){http_response_code(403);exit('Token tidak valid.');}
 $id=is_string($_POST['planet_id']??null)?trim($_POST['planet_id']):'';

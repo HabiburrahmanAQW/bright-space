@@ -3,7 +3,7 @@
 require_once __DIR__.'/_auth.php';
 require_once __DIR__.'/_layout.php';
 require_once __DIR__.'/../config/registration.php';
-$tutor=tutor_require_login();
+$tutor=tutor_require_teacher();
 $errors=[];
 $old=['username'=>'','display_name'=>''];
 $created=$_SESSION['bs_new_student_once']??null;

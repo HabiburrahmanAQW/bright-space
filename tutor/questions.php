@@ -3,7 +3,7 @@ require __DIR__ . '/_auth.php';
 require_once __DIR__ . '/../config/question_repository.php';
 // BS_STAGE6B_QUESTION_NOTE
 require_once __DIR__ . '/../config/publication_repository.php';
-$tutor = tutor_require_login();
+$tutor = tutor_require_teacher();
 $missionId = filter_input(INPUT_GET, 'mission', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
 $mission = $missionId ? bmq_owned_mission((int)$missionId, $tutor) : null;
 if (!$mission) { http_response_code(404); exit('Misi tidak ditemukan atau bukan milik akun ini.'); }
