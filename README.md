@@ -9,7 +9,7 @@ Platform pembelajaran bergamifikasi berbasis **Native PHP, MySQL, Tailwind CSS (
 3. Jalankan migrasi berurutan dari `sql/01_fondasi_tutor.sql` sampai `sql/04_toko_dan_snapshot.sql`. Untuk database yang sudah dipakai Tahap 6B, **jangan hapus atau reset tabel**.
 4. Untuk instalasi baru setelah migrasi, jalankan `php tools/init_stage6b.php` agar snapshot awal publikasi terisi bila diperlukan. Jalankan hanya pada database yang sudah memiliki keempat migrasi.
 5. Buat akun uji (jika belum ada) dengan `php tools/create_student.php <username>` dan `php tools/create_tutor.php <username>`.
-6. Buka `login.php` untuk login terpadu siswa/tutor. Siswa lokal dapat mendaftar pada `register.php`; administrator membuat tutor pada `tutor/accounts.php`.
+6. Impor juga sql/05_tutor_students.sql. Buka login.php tanpa pilihan role. Tutor mendaftar di register-tutor.php dan menunggu persetujuan admin; siswa dibuat oleh tutor di tutor/students.php.
 
 `sql/` berisi skema/migrasi, **bukan data pribadi siswa**. Jangan commit dump data nyata atau file kredensial.
 
@@ -29,10 +29,16 @@ Kode halaman guru prototipe dan installer patch Tahap 1–6B sudah dikeluarkan d
 
 Mengedit planet yang sudah Published **tidak otomatis mengubahnya menjadi Draft**. Perubahan pertanyaan tetap perlu `Update Publikasi` pada halaman `tutor/mission-list.php`. Menghapus misi atau mengganti gamemode yang sudah tayang perlu mengembalikan planet ke Draft dahulu untuk mencegah hilangnya snapshot aktif.
 
-**Belum selesai:** API legacy di `api/`, logika toko lama dalam `assets/js/app.js`, serta login/register terpadu. Hindari menggunakan endpoint API lama sampai migrasi autentikasi dan toko selesai.
+**Belum selesai:** API legacy di api/, logika toko lama dalam assets/js/app.js, serta keamanan login untuk produksi (reset password, audit log, pembatasan per IP). Hindari menggunakan endpoint API lama sampai migrasi autentikasi dan toko selesai.
 
 Lihat [audit dan checklist Tahap 7A](docs/AUDIT-TAHAP7A.md).
 
-## Tahap 7C — Registrasi dan Login
+## Tahap 7C — Registrasi dan Login (Revisi)
 
-Siswa dapat membuat akun pada register.php secara lokal. Login terpadu menggunakan login.php?role=siswa dan login.php?role=tutor, dengan cookie/session terpisah. Tutor baru dapat dibuat melalui tutor/accounts.php oleh administrator. Lihat docs/TAHAP7C-AUTH.md.
+- Login: login.php — satu form, server menentukan role dan dashboard dari kredensial sah.
+- Tutor: register-tutor.php — mandiri, akun Pending sampai disetujui admin di tutor/accounts.php.
+- Siswa: tutor/students.php — dibuat tutor, password awal acak dan hanya diperlihatkan sekali.
+- Tidak ada register siswa publik; migrasi sql/05_tutor_students.sql wajib diimpor.
+- URL tutor/login.php lama tetap mengarah ke login utama. Session siswa dan tutor terpisah.
+
+Panduan dan checklist: docs/TAHAP7C-AUTH.md.

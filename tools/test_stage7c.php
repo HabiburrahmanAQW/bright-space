@@ -24,3 +24,17 @@ if (getenv('BS_TUTOR_REGISTRATION') === false || getenv('BS_TUTOR_REGISTRATION')
     check(!bs_registration_enabled(['REMOTE_ADDR'=>'10.1.2.3','SERVER_NAME'=>'example.org']),'registrasi tutor non-lokal tertutup');
 }
 echo "Validasi Tahap 7C berhasil. Pengujian login dan database tetap dilakukan di Laragon.\n";
+
+$root=dirname(__DIR__);
+$loginSource=file_get_contents($root.'/login.php');
+$tutorSource=file_get_contents($root.'/register-tutor.php');
+$studentSource=file_get_contents($root.'/tutor/students.php');
+$adminSource=file_get_contents($root.'/tutor/accounts.php');
+check(is_string($loginSource) && !str_contains($loginSource,'name="role"') && !str_contains($loginSource,'bs-auth-tabs'),
+    'login tidak meminta pemilihan role');
+check(is_string($tutorSource) && str_contains($tutorSource,"'tutor',0"),
+    'registrasi tutor selalu membuat akun pending');
+check(is_string($studentSource) && str_contains($studentSource,'bs_tutor_students'),
+    'akun siswa ditautkan ke tutor pembuat');
+check(is_string($adminSource) && str_contains($adminSource,"'admin'") && str_contains($adminSource,'tutor_valid_csrf'),
+    'persetujuan tutor membutuhkan admin dan CSRF');
