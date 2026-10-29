@@ -8,7 +8,7 @@ Platform pembelajaran bergamifikasi berbasis **Native PHP, MySQL, Tailwind CSS (
 2. Buat database MySQL bernama `bright_space` dan sesuaikan `config/database.php` atau variabel lingkungan `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`.
 3. Jalankan migrasi berurutan dari `sql/01_fondasi_tutor.sql` sampai `sql/04_toko_dan_snapshot.sql`. Untuk database yang sudah dipakai Tahap 6B, **jangan hapus atau reset tabel**.
 4. Untuk instalasi baru setelah migrasi, jalankan `php tools/init_stage6b.php` agar snapshot awal publikasi terisi bila diperlukan. Jalankan hanya pada database yang sudah memiliki keempat migrasi.
-5. Buat akun uji (jika belum ada) dengan `php tools/create_student.php <username>` dan `php tools/create_tutor.php <username>`.
+5. Pastikan satu akun tutor pengelola yang tepercaya memiliki role admin untuk menyetujui pendaftaran tutor. Setelah itu, akun tutor dan siswa baru dibuat lewat web, bukan terminal.
 6. Impor juga sql/05_tutor_students.sql. Buka login.php tanpa pilihan role. Tutor mendaftar di register-tutor.php dan menunggu persetujuan admin; siswa dibuat oleh tutor di tutor/students.php.
 
 `sql/` berisi skema/migrasi, **bukan data pribadi siswa**. Jangan commit dump data nyata atau file kredensial.
