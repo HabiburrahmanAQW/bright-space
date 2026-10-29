@@ -5,6 +5,8 @@ on:
     paths:
       - "**/*.php"
       - ".github/workflows/php-checks.yml"
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,5 +25,5 @@ jobs:
           coverage: none
       - name: Lint PHP files
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Test Stage 7C registration validation
+      - name: Test Stage 7C roles and account management
         run: php tools/test_stage7c.php
