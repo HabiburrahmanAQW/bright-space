@@ -1,40 +1,27 @@
-# Tahap 7C (Revisi) — Akun Tutor, Siswa, dan Login
+# Tahap 7C (Revisi) — Portal Admin Terpisah
 
-## Alur
-1. Tutor mendaftar sendiri melalui register-tutor.php. Akun dibuat pada bs_tutors dengan role tutor dan is_active=0 (Pending).
-2. Admin yang sudah aktif membuka tutor/accounts.php untuk menyetujui tutor. Sebelum disetujui, tutor tidak bisa masuk atau membuat akun siswa.
-3. Login pada login.php tanpa opsi role. Server memeriksa username+password yang valid pada tabel bs_students/bs_tutors, kemudian mengarahkan ke dashboard yang sesuai.
-4. Tutor terautentikasi membuka tutor/students.php, membuat siswa dan memperoleh password awal acak (ditampilkan satu kali).
-5. Data siswa di bs_students, kepemilikan siswa pada bs_tutor_students; hanya tutor pembuat yang dapat melihat daftar siswanya.
-6. Siswa masuk lewat login.php. Tidak ada register siswa publik.
+Admin mengakses admin/index.php (dashboard akun), admin/tutors.php (buat, lihat, edit, nonaktif/aktif, reset password tutor) dan admin/students.php (fitur yang sama bagi siswa). Form tidak mengubah role admin yang ada. Hapus permanen diganti penonaktifan untuk menjaga integritas XP, Star Coins, progres dan foreign key.
 
-## Migrasi wajib
-Backup database bright_space, lalu impor sql/05_tutor_students.sql setelah migrasi sebelumnya (01–04). Migrasi ini hanya menambah tabel relasi; tidak menghapus data siswa, koin, misi, atau tutor.
+Tutor mengakses tutor/index.php, planet-form.php, mission-list.php, questions.php dan endpoint pengelola terkait. Tutor tidak dapat mengakses CRUD akun; admin tidak dapat mengakses editor tutor meski mengetahui URL.
 
-Akun siswa Tahap 5/6B yang dibuat lewat CLI tetap dapat login, tetapi belum otomatis menjadi siswa dari tutor tertentu di halaman Kelola Siswa.
+Akun siswa, tutor, dan admin masuk melalui login.php yang sama tanpa pemilihan role. Validasi backend mengarahkan ke dashboard yang tepat, dengan session siswa terpisah dari session tutor/admin.
 
-## Admin pertama
-Jika belum ada admin, gunakan akun tutor pengelola yang sudah aktif dan tepercaya. Jalankan sekali pada phpMyAdmin (sesuaikan username):
+Tidak ada registrasi tutor atau siswa publik. Semua akun baru dibuat melalui dashboard admin. Password acak hanya ditampilkan sekali dan disimpan sebagai password_hash di database.
 
-    UPDATE bs_tutors SET role='admin' WHERE username='tutor_pengelola' AND is_active=1;
-
-Admin dapat menyetujui tutor dari halaman akun. Pendaftar publik tidak dapat memilih role admin atau menyetujui dirinya sendiri.
-
-## Kebijakan pendaftaran
-Secara default register-tutor.php hanya terbuka bagi request loopback (localhost/127.0.0.1/host .test). BS_TUTOR_REGISTRATION=0 menutup register; BS_TUTOR_REGISTRATION=1 membuka secara eksplisit untuk akses dari jaringan lain. Jangan aktifkan di internet sebelum verifikasi pengajar, kebijakan privasi, perlindungan bot, dan rate limiting per IP siap.
+## Database
+Tabel bs_tutors dan bs_students tetap digunakan. Tidak ada migrasi wajib yang baru. Jika migrasi sebelumnya membuat bs_tutor_students, biarkan ada sebagai data historis dan jangan drop.
 
 ## Checklist Laragon
-1. php tools/test_stage7c.php dan php -l untuk file PHP baru/yang berubah.
-2. Buka login.php: hanya ada username dan password; tidak ada tab login Siswa/Tutor.
-3. Akun lama siswa/tutor dapat login dan diarahkan sesuai role masing-masing.
-4. Daftar tutor via register-tutor.php; di database is_active=0; tidak dapat login sebelum admin setujui.
-5. Admin menyetujui tutor via tutor/accounts.php; tutor tersebut sekarang bisa login.
-6. Tutor biasa mendapatkan 403 saat mengakses tutor/accounts.php.
-7. Tutor aktif membuka tutor/students.php; siswa baru memperoleh username dan password awal sekali.
-8. Siswa baru dapat login, melihat dashboard, dan bermain misi. Tidak ada register siswa publik.
-9. Tutor A tidak dapat melihat daftar siswa milik Tutor B.
-10. Logout, XP/Star Coins, toko, dan Update Publikasi tetap berfungsi.
-11. Periksa username ganda, password pendek, CSRF salah, dan status pending.
+1. Backup proyek dan database; checkout feature/stage-7c-auth-register.
+2. Jalankan php tools/test_stage7c.php. Lint seluruh admin/*.php, login.php, tutor/index.php.
+3. Login admin -> admin/index.php, sidebar hanya Dashboard Admin, Akun Tutor, Akun Siswa.
+4. Admin membuat tutor dan siswa; password muncul sekali; login akun tersebut diarahkan ke portal masing-masing.
+5. Admin dapat mengedit nama/username, mencari, nonaktifkan/aktifkan, dan reset password; XP/koin siswa tetap utuh.
+6. Tutor tidak melihat menu akun dan tidak bisa mengakses admin/tutors.php ataupun admin/students.php (403).
+7. Admin tidak bisa mengakses tutor/planet-form.php, planet-save.php, mission-list.php, questions.php (403).
+8. Logout kedua portal, planet dan publikasi, misi, XP serta toko tetap normal.
+9. URL lama tutor/index.php bagi admin seharusnya diarahkan ke admin/index.php.
+10. Pastikan register-tutor.php, tutor/accounts.php dan tutor/students.php tidak lagi tersedia.
 
-## Keterbatasan keamanan
-Menghilangkan tab role mengurangi kebingungan, bukan menggantikan pemeriksaan akses server. Akun tutor selalu harus disetujui admin. Belum tersedia verifikasi resmi pengajar, reset password, wajib mengganti password awal siswa, perlindungan bot/rate-limit per IP, maupun audit log admin. Sebelum digunakan publik—terutama untuk anak-anak—fitur tersebut dan tata kelola data siswa wajib ditambahkan.
+## Keterbatasan
+Manajemen pengguna ini cocok untuk pengujian satu sekolah, namun belum ada kelas/tahun ajaran, log admin, ganti password pertama kali, pemulihan akun, perizinan wali, atau rate-limit IP yang kuat. Simpan kredensial secara privat.

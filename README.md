@@ -1,44 +1,29 @@
 # BRIGHT SPACE
 
-Platform pembelajaran bergamifikasi berbasis **Native PHP, MySQL, Tailwind CSS (CDN), Vanilla JavaScript, dan inline SVG**.
+Aplikasi pembelajaran berbasis Native PHP, MySQL, Tailwind CDN, dan Vanilla JS.
 
-## Menjalankan proyek (Laragon)
+## Akses
+- Login bersama: login.php (tanpa memilih role).
+- Administrator: admin/index.php, admin/tutors.php, admin/students.php — CRUD akun tutor dan siswa saja.
+- Tutor: tutor/index.php — planet, misi, dan soal saja.
+- Siswa: dashboard.php — petualangan, toko, progres, XP.
 
-1. Salin repositori ke folder web Laragon.
-2. Buat database MySQL bernama `bright_space` dan sesuaikan `config/database.php` atau variabel lingkungan `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`.
-3. Jalankan migrasi berurutan dari `sql/01_fondasi_tutor.sql` sampai `sql/04_toko_dan_snapshot.sql`. Untuk database yang sudah dipakai Tahap 6B, **jangan hapus atau reset tabel**.
-4. Untuk instalasi baru setelah migrasi, jalankan `php tools/init_stage6b.php` agar snapshot awal publikasi terisi bila diperlukan. Jalankan hanya pada database yang sudah memiliki keempat migrasi.
-5. Pastikan satu akun tutor pengelola yang tepercaya memiliki role admin untuk menyetujui pendaftaran tutor. Setelah itu, akun tutor dan siswa baru dibuat lewat web, bukan terminal.
-6. Impor juga sql/05_tutor_students.sql. Buka login.php tanpa pilihan role. Tutor mendaftar di register-tutor.php dan menunggu persetujuan admin; siswa dibuat oleh tutor di tutor/students.php.
+Admin membuat tutor dan siswa melalui web. Password awal dibangkitkan secara acak dan hanya terlihat sekali. Tidak ada formulir registrasi publik.
 
-`sql/` berisi skema/migrasi, **bukan data pribadi siswa**. Jangan commit dump data nyata atau file kredensial.
+## Laragon
+1. Gunakan database bright_space yang sudah ada; backup sebelum mengganti kode.
+2. Migrasi awal tersimpan di sql/01 sampai sql/04. Jangan impor ulang/reset database aktif.
+3. Migrasi sql/05_tutor_students.sql adalah sisa relasi tutor-siswa dari versi lama. Bila tabel bs_tutor_students sudah ada, jangan hapus; aplikasi revisi ini tidak lagi bergantung padanya.
+4. Buat admin pertama dengan menetapkan satu akun bs_tutors yang sudah ada, aktif dan tepercaya menjadi role admin via phpMyAdmin. Akun admin berikutnya dikelola menurut kebijakan sekolah, bukan melalui form umum.
+5. Masuk melalui login.php; server mengarahkan akun berdasarkan role yang diverifikasi.
+6. Jalankan php tools/test_stage7c.php serta PHP lint sebelum merge.
 
-## Struktur aktif
+## Struktur
+- admin/: dashboard dan CRUD akun siswa/tutor, reset password, aktif/nonaktifkan (bukan hard delete).
+- tutor/: editor planet, bank soal, publikasi. Semua endpoint editor hanya untuk tutor.
+- config/: helper database, progres, toko dan autentikasi.
+- sql/: migrasi database lama dan terkini.
+- docs/TAHAP7C-AUTH.md: panduan pengujian.
 
-- `dashboard.php`, `misi.php`, `planet-detail.php`, `mainkan-misi.php`: portal siswa dan permainan
-- `tutor/`: portal tutor, editor planet, bank soal, dan publikasi
-- `config/`: akses data, ekonomi, progres, dan snapshot publikasi
-- `components/`: komponen UI portal siswa
-- `assets/js/`: interaksi browser
-- `sql/`: skema MySQL
-- `tools/create_*.php`, `tools/init_stage6b.php`, `tools/test_stage*.php`: utilitas setup/pengujian
-
-## Catatan Tahap 7A
-
-Kode halaman guru prototipe dan installer patch Tahap 1–6B sudah dikeluarkan dari **source aktif**. Versi sebelumnya tetap ada dalam riwayat Git; installer tidak diperlukan lagi untuk menjalankan proyek yang sudah dimigrasikan.
-
-Mengedit planet yang sudah Published **tidak otomatis mengubahnya menjadi Draft**. Perubahan pertanyaan tetap perlu `Update Publikasi` pada halaman `tutor/mission-list.php`. Menghapus misi atau mengganti gamemode yang sudah tayang perlu mengembalikan planet ke Draft dahulu untuk mencegah hilangnya snapshot aktif.
-
-**Belum selesai:** API legacy di api/, logika toko lama dalam assets/js/app.js, serta keamanan login untuk produksi (reset password, audit log, pembatasan per IP). Hindari menggunakan endpoint API lama sampai migrasi autentikasi dan toko selesai.
-
-Lihat [audit dan checklist Tahap 7A](docs/AUDIT-TAHAP7A.md).
-
-## Tahap 7C — Registrasi dan Login (Revisi)
-
-- Login: login.php — satu form, server menentukan role dan dashboard dari kredensial sah.
-- Tutor: register-tutor.php — mandiri, akun Pending sampai disetujui admin di tutor/accounts.php.
-- Siswa: tutor/students.php — dibuat tutor, password awal acak dan hanya diperlihatkan sekali.
-- Tidak ada register siswa publik; migrasi sql/05_tutor_students.sql wajib diimpor.
-- URL tutor/login.php lama tetap mengarah ke login utama. Session siswa dan tutor terpisah.
-
-Panduan dan checklist: docs/TAHAP7C-AUTH.md.
+## Batasan
+Belum siap untuk pengguna anak secara publik. Perlu privasi/retensi data, perubahan password awal, pemulihan password, audit log, proteksi brute-force per IP/akun, serta HTTPS.
