@@ -19,8 +19,8 @@ $bad=$input; $bad['password']='😀😀😀😀'; $bad['password_confirm']='😀
 check(count($e)>0,'password beberapa emoji tidak lolos batas minimal karakter');
 $bad=$input; $bad['password_confirm']='beda'; [, $e]=bs_registration_validate($bad);
 check(count($e)>0,'konfirmasi password divalidasi');
-check(bs_registration_enabled(['REMOTE_ADDR'=>'127.0.0.1','SERVER_NAME'=>'localhost']) || getenv('BS_PUBLIC_REGISTRATION')==='0','localhost mengizinkan registrasi default');
-if (getenv('BS_PUBLIC_REGISTRATION') === false || getenv('BS_PUBLIC_REGISTRATION') === '') {
-    check(!bs_registration_enabled(['REMOTE_ADDR'=>'10.1.2.3','SERVER_NAME'=>'example.org']),'registrasi publik non-lokal tertutup');
+check(bs_registration_enabled(['REMOTE_ADDR'=>'127.0.0.1','SERVER_NAME'=>'localhost']) || getenv('BS_TUTOR_REGISTRATION')==='0','localhost mengizinkan registrasi default');
+if (getenv('BS_TUTOR_REGISTRATION') === false || getenv('BS_TUTOR_REGISTRATION') === '') {
+    check(!bs_registration_enabled(['REMOTE_ADDR'=>'10.1.2.3','SERVER_NAME'=>'example.org']),'registrasi tutor non-lokal tertutup');
 }
 echo "Validasi Tahap 7C berhasil. Pengujian login dan database tetap dilakukan di Laragon.\n";

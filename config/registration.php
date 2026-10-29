@@ -4,7 +4,7 @@ defined('BRIGHT_SPACE') or exit('Akses langsung tidak diizinkan.');
 
 function bs_registration_enabled(array $server): bool
 {
-    $setting = getenv('BS_PUBLIC_REGISTRATION');
+    $setting = getenv('BS_TUTOR_REGISTRATION');
     if ($setting === '0') return false;
     if ($setting === '1') return true;
 

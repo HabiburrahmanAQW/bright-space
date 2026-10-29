@@ -1,5 +1,5 @@
 <?php
-/** URL login tutor lama tetap berfungsi melalui pintu masuk terpadu. */
+/** Kompatibilitas tautan login tutor lama menuju satu form login. */
 header('Cache-Control: no-store');
-header('Location: ../login.php?role=tutor', true, 303);
+header('Location: ../login.php', true, 303);
 exit;
