@@ -71,3 +71,14 @@ function tutor_require_login(): array
     }
     return $tutor;
 }
+
+/** Akses khusus tutor pengajar; administrator hanya mengelola akun dan pemantauan. */
+function tutor_require_teacher(): array
+{
+    $account = tutor_require_login();
+    if (($account['role'] ?? '') !== 'tutor') {
+        http_response_code(403);
+        exit('Akses hanya untuk Tutor. Administrator menggunakan Dashboard Admin.');
+    }
+    return $account;
+}

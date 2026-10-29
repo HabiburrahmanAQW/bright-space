@@ -1,7 +1,7 @@
 <?php
 /** Simpan planet + banyak misi secara atomik. */
 require __DIR__ . '/_planet-editor.php';
-$tutor = tutor_require_login();
+$tutor = tutor_require_teacher();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     header('Allow: POST');

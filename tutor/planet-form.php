@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/_planet-editor.php';
-$tutor = tutor_require_login();
+$tutor = tutor_require_teacher();
 $editId = isset($_GET['id']) && is_string($_GET['id']) ? trim($_GET['id']) : '';
 $isEdit = $editId !== '';
 

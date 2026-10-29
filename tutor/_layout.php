@@ -13,7 +13,7 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
         ['id' => 'questions', 'href' => 'index.php#planet-list-title', 'icon' => '📚', 'label' => 'Kelola Soal Misi'],
     ];
     $displayName = (string)($tutor['display_name'] ?? $tutor['username'] ?? 'Tutor');
-    $role = (($tutor['role'] ?? '') === 'admin') ? 'Administrator' : 'Tutor';
+    $role = 'Tutor';
     $csrf = tutor_csrf_token();
     ?>
 <a href="#tutor-main" class="bs-tutor-skip">Langsung ke konten</a>
@@ -46,10 +46,10 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
     </nav>
 
     <div class="bs-tutor-sidebar-footer">
-        <p>Kelola materi pembelajaran dan terbitkan misi untuk siswa.</p>
+        <p>Kelola planet, misi, dan soal pembelajaran.</p>
         <form action="logout.php" method="post">
             <input type="hidden" name="csrf_token" value="<?= tutor_e($csrf) ?>">
-            <button type="submit" class="bs-tutor-logout">🚪 Keluar dari Tutor</button>
+            <button type="submit" class="bs-tutor-logout">🚪 Keluar</button>
         </form>
     </div>
 </aside>
@@ -70,7 +70,7 @@ function tutor_layout_start(array $tutor, string $active, string $pageTitle): vo
             </span>
             <form method="post" action="logout.php" class="bs-tutor-header-logout">
                 <input type="hidden" name="csrf_token" value="<?= tutor_e($csrf) ?>">
-                <button type="submit" aria-label="Keluar dari portal tutor">Keluar <span aria-hidden="true">↗</span></button>
+                <button type="submit" aria-label="Keluar dari BRIGHT SPACE">Keluar <span aria-hidden="true">↗</span></button>
             </form>
         </div>
     </header>

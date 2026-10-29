@@ -3,7 +3,7 @@ require __DIR__.'/_auth.php';
 require_once __DIR__.'/../config/question_repository.php';
 // BS_STAGE6B_MISSION_LIST
 require_once __DIR__.'/../config/publication_repository.php';
-$tutor=tutor_require_login();
+$tutor=tutor_require_teacher();
 $planetId=(string)($_GET['planet']??'');
 if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D',$planetId) || strlen($planetId)>64){http_response_code(400);exit('ID planet tidak valid.');}
 $stmt=mission_db()->prepare('SELECT id, name, created_by, publication_status FROM bs_planets WHERE id=?');$stmt->execute([$planetId]);$planet=$stmt->fetch(PDO::FETCH_ASSOC);

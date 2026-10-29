@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/_auth.php';
 require_once __DIR__ . '/../config/question_repository.php';
-$tutor = tutor_require_login();
+$tutor = tutor_require_teacher();
 if ($_SERVER['REQUEST_METHOD']!=='POST') { http_response_code(405); exit('POST diperlukan'); }
 if (!tutor_valid_csrf($_POST['csrf_token'] ?? null)) { http_response_code(403); exit('Token keamanan tidak valid.'); }
 $missionId = filter_var($_POST['mission_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) ?: 0;

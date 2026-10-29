@@ -1,6 +1,11 @@
 <?php
 require __DIR__ . '/_auth.php';
 $tutor = tutor_require_login();
+if (($tutor['role'] ?? '') === 'admin') {
+    header('Location: ../admin/index.php', true, 303);
+    exit;
+}
+$tutor = tutor_require_teacher();
 $planets = [];
 $databaseError = null;
 try {
